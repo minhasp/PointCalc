@@ -1,5 +1,5 @@
 //============================================================================
-// Name        : H1.cpp
+// Name        : main.cpp
 // Author      : MinhNv
 // Version     :
 // Copyright   : Your copyright notice
@@ -11,7 +11,7 @@
 #include <string>
 #include <map>
 #include <stdio.h>
-#include "./Geo/Point2D.h"
+#include "Geo/Point2D.h"
 #include "Geo/LineSegment.h"
 #include "Geo/ConvexHull.h"
 #include "Geo/CPolygon.h"

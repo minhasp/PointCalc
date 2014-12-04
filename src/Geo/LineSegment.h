@@ -20,9 +20,9 @@ public:
 	LineSegment(void * _from,void * _to);
 
 	int Intersection2Segment(LineSegment otherLine,double &x,double &y);
-	///Hàm tìm giao điểm của 2 đoạn thẳng  .return 1 nếu 2 đoạn giao nhau (tọa độ lưu trong tham số x,y), 0 ngược lại
-	///return -2 nếu 2 đoạn song song
-	///return -1 nếu 2 đoạn nằm trên 1 đường thẳng
+	///HÃ m tÃ¬m giao Ä‘iá»ƒm cá»§a 2 Ä‘oáº¡n tháº³ng  .return 1 náº¿u 2 Ä‘oáº¡n giao nhau (tá»�a Ä‘á»™ lÆ°u trong tham sá»‘ x,y), 0 ngÆ°á»£c láº¡i
+	///return -2 náº¿u 2 Ä‘oáº¡n song song
+	///return -1 náº¿u 2 Ä‘oáº¡n náº±m trÃªn 1 Ä‘Æ°á»�ng tháº³ng
 
 
 
@@ -30,7 +30,7 @@ public:
 
 
 	virtual ~LineSegment();
-private:
+public:
 	double x1;
 	double y1;
 	double x2;

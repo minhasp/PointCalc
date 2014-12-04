@@ -1,0 +1,66 @@
+﻿#pragma once
+#include "LineSegmentIntersection.h"
+#include <map>
+
+using namespace std;
+
+/*
+* Lớp SweepLineIntersection thực hiện tìm giao điểm bằng giải thuật sweepLine
+* với độ phức tạp tính toán O((N+K)Log N )
+* N: số lượng đoạn thẳng
+* K: Số lượng giao điểm
+*/
+
+class   SweepLineIntersection:
+	public LineSegmentIntersection
+{
+private:
+	map<IntersectedPoint_Derived*,LineSegment*,ComparePoint> m_Qtree;
+	/// m_Qtree là cây chứa danh sách điểm sự kiện ( gồm các điểm đầu mút và các giao điểm)
+	map<IntersectedPoint_Derived*,int,ComparePoint> m_mapPoints;
+	/// Lưu danh sách các giao điểm tìm được
+
+
+
+
+public:
+	SweepLineIntersection(void);
+
+	void addLineSegment(double x1,double y1,double x2,double y2,void * data=0);
+	/// Thêm một đoạn (x1, y1)-(x2, y2) thẳng vào tập hợp. Trong đó data là kiểu dữ liệu gắn kèm với đoạn thẳng.
+
+	size_t calc(void *progress=0);
+	/// Tính toàn bộ giao cắt của tập hơp và trả về số lượng các điểm giao cắt
+
+	size_t getNumberOfIntersectedPoint();
+	/// Trả về số lượng điểm giao.
+
+	IntersectedPoint * getIntersectedPoint(size_t at);
+	/// Trả về điểm giao cắt tại vị trí at.
+
+
+	void getResultSegments(vector<LineSegment> & result);
+	/// Trả về toàn bộ các đoạn thẳng sau khi đã tính toán bao gồm cả đoạn thẳng có giao cắt và không có giao cắt.
+
+	virtual vector<LineSegment*> getResultSegments();
+
+
+	void clear();
+	/// Thu hồi bộ nhớ đã được cấp phát và sử dụng
+
+
+	~SweepLineIntersection(void);
+	size_t SweepLineIntersection::getNumOfLineSeg()
+	{
+		return m_lineSegs.size();
+	}
+
+	LineSegment SweepLineIntersection::getLine( size_t at )
+	{
+		return *m_lineSegs[at];
+	}
+private:
+	void CheckInterSection(LineSegment *A,LineSegment *B);
+	/// Hàm kiểm tra và xử lý sự giao cắt của 2 đoạn thẳng A,B
+};
+

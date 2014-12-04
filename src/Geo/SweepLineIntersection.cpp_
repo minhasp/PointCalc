@@ -1,0 +1,391 @@
+﻿#include "SweepLineIntersection.h"
+#include <string>
+#include <iostream>
+#include <set>
+
+
+SweepLineIntersection::SweepLineIntersection(void)
+{
+	
+}
+
+
+SweepLineIntersection::~SweepLineIntersection(void)
+{
+	clear();
+}
+
+void SweepLineIntersection::addLineSegment( double x1,double y1,double x2,double y2,void * data/*=0*/ )
+{
+	LineSegment *tmp=new LineSegment(x1,y1,x2,y2,data);
+	IntersectedPoint_Derived *d1=new IntersectedPoint_Derived(tmp->x1,tmp->y1,1);
+	IntersectedPoint_Derived *d2=new IntersectedPoint_Derived(tmp->x2,tmp->y2,2);
+
+
+	
+		m_lineSegs.push_back(tmp);
+
+		map<IntersectedPoint_Derived*,LineSegment*,ComparePoint>::iterator it_Qtree=m_Qtree.find(d1);
+
+
+		if(it_Qtree!=m_Qtree.end()) 
+		{	
+			it_Qtree->first->m_typeOfPoint=3;
+			it_Qtree->first->m_ListLineSegment.comp.setvalue(max(tmp->y1,it_Qtree->second->y1)+1);
+			it_Qtree->first->AddLineToList(tmp);
+			it_Qtree->first->AddLineToList(it_Qtree->second);
+			m_mapPoints.insert(pair<IntersectedPoint_Derived*,int>(it_Qtree->first,m_mapPoints.size()));
+			delete d1;
+		}
+
+		else m_Qtree.insert(pair<IntersectedPoint_Derived*,LineSegment*>(d1,tmp));
+
+		it_Qtree=m_Qtree.find(d2);
+
+		if(it_Qtree!=m_Qtree.end()) 
+		{	
+			it_Qtree->first->m_typeOfPoint=3;
+			it_Qtree->first->m_ListLineSegment.comp.setvalue(max(tmp->y1,it_Qtree->second->y1)+1);
+			it_Qtree->first->AddLineToList(tmp);
+			it_Qtree->first->AddLineToList(it_Qtree->second);
+			m_mapPoints.insert(pair<IntersectedPoint_Derived*,int>(it_Qtree->first,m_mapPoints.size()));
+			delete d2;
+		}
+
+		else m_Qtree.insert(pair<IntersectedPoint_Derived*,LineSegment*>(d2,tmp));
+	
+	
+}
+
+size_t SweepLineIntersection::calc( IProgress *progress/*=0*/ )
+{
+	m_IntersectedPoints.clear();
+
+	map<IntersectedPoint_Derived*,LineSegment*,ComparePoint>::iterator currentPoint;
+				///currentPoint : Điểm hiện tại đang trỏ đến ( trong danh sách các điểm sự kiện m_Qtree)
+	map<IntersectedPoint_Derived*,LineSegment*,ComparePoint>::iterator findPoint;
+
+	CompareLine segcmp(0);			///segcmp dùng cho myMap để định nghĩa phép so sánh khi thao tác với map
+
+	map<LineSegment*,int,CompareLine> myMap(segcmp);
+									///myMap sanh sách các đoạn thẳng bị cắt bởi đường thẳng quét
+
+
+
+	map<LineSegment*,int,CompareLine>::iterator currentLine;					///currentLine trỏ đến đoạn thẳng chứa currentPoint
+	map<LineSegment*,int,CompareLine>::iterator nextLine=currentLine;			///nextLine trỏ đến đoạn kế tiếp của currentLine trong myMap
+	map<LineSegment*,int,CompareLine>::iterator prevLine=currentLine;			///prevLine trỏ đến đoạn trước currentLine trong myMap
+	map<LineSegment*,int,CompareLine>::iterator begin__;
+
+	
+
+	LineSegment *currentLineSeg;												///Dùng để lưu đoạn thẳng trong currentLine
+	LineSegment *nextLineSeg;													///Dùng để lưu đoạn thẳng trong nextLine	
+	LineSegment *prevLineSeg;													///Dùng để lưu đoạn thẳng trong prevLine
+
+	IntersectedPoint_Derived* intersedpoint;									///Biến tạm
+	
+	currentPoint=m_Qtree.begin();												///currentPoint trỏ đến đoạn đầu tiên trong m_Qtree
+	
+	while(currentPoint!=m_Qtree.end())
+	{
+		myMap.comp.setvalue(currentPoint->first->x,currentPoint->first->y);		///Thiết lập đường thẳng quét tại điểm hiện tại
+		
+		if(currentPoint->first->m_typeOfPoint==1)
+			/// Gặp điểm đầu của đoạn thẳng
+		{
+
+			myMap.insert(pair<LineSegment*,int>(currentPoint->second,1));		///Chèn đoạn chứa điểm hiện tại vào myMap
+
+
+			currentLine=myMap.find(currentPoint->second);
+
+			nextLine=currentLine;nextLine++;
+
+			prevLine=currentLine;prevLine--;
+			
+			begin__=myMap.begin();begin__--;
+			
+			currentLineSeg=currentLine->first;
+			
+			if(nextLine!=myMap.end())		
+				///Nếu tồn tại đoạn kề trên
+			{
+				nextLineSeg=nextLine->first;
+				
+				CheckInterSection(currentLineSeg,nextLineSeg);
+				/// Kiểm tra giao cắt với đoạn kề trên
+
+			}
+
+			if(prevLine!=begin__)
+				///Nếu tồn tại đoạn kề dưới
+			{	
+				prevLineSeg=prevLine->first;
+
+				CheckInterSection(currentLineSeg,prevLineSeg);
+				/// Kiểm tra giao cắt với đoạn kề dưới
+			}
+
+		}
+
+		else		
+		if(currentPoint->first->m_typeOfPoint==2)
+			/// Gặp điểm cuối của đoạn thẳng
+		{	
+			currentLine=myMap.find(currentPoint->second);	
+			nextLine=currentLine;nextLine++;				
+			prevLine=currentLine;prevLine--;				
+
+			
+
+			if(nextLine!= myMap.end() && prevLine!=begin__)
+				///Nếu tồn tại đoạn kề trên và đoạn kề dưới của đoạn hiện tại
+			{
+				prevLineSeg=prevLine->first;
+				nextLineSeg=nextLine->first;
+
+				CheckInterSection(prevLineSeg,nextLineSeg);
+				/// Kiểm tra giao cắt của 2 đoạn này
+			}
+
+			myMap.erase(currentLine);/// Xóa đoạn hiện tại khỏi danh sách
+		}
+
+
+		else 
+		
+		if(currentPoint->first->m_typeOfPoint==3)
+			///Gặp giao điểm
+		{
+			intersedpoint=currentPoint->first;
+			map<LineSegment*,int,CompareLine>::iterator it_LineSegOfPoint=intersedpoint->m_ListLineSegment.begin();///Là 1 Iterator để duyệt những đoạn đi qua intersedpoint
+			map<LineSegment*,int,CompareLine>::iterator beginOfListLinesegment=intersedpoint->m_ListLineSegment.begin();beginOfListLinesegment--;
+
+
+
+
+			//////////////////////////////////////////////////////////////////////////
+
+			findPoint=currentPoint;
+			if(currentPoint !=m_Qtree.begin()) findPoint--;
+
+			myMap.comp.setvalue(findPoint->first->x,findPoint->first->y);
+			///Thiết lập giá trị đường thẳng quét tại điểm ngay trước điểm hiện tại để tiến hành xóa các đoạn
+
+			while (it_LineSegOfPoint!=intersedpoint->m_ListLineSegment.end())
+				///xóa toàn bộ các đoạn không có điểm đầu là intersedpoint
+			{
+				
+				if(*intersedpoint!=IntersectedPoint_Derived(it_LineSegOfPoint->first->x1,it_LineSegOfPoint->first->y1))
+					myMap.erase(it_LineSegOfPoint->first);
+
+				it_LineSegOfPoint++;
+			}
+
+			myMap.comp.setvalue(currentPoint->first->x,currentPoint->first->y);
+			///Thiết lập vị trí đường thằng quét về điểm hiện tại
+			
+			it_LineSegOfPoint=intersedpoint->m_ListLineSegment.begin();
+
+			int numLine=0;		///Số lượng đoạn thẳng còn lại trong myMap mà đi qua intersedpoint
+
+			while (it_LineSegOfPoint!=intersedpoint->m_ListLineSegment.end())
+				///chèn thêm các đoạn không có điểm cuối là intersedpoint
+			{
+
+				if(*intersedpoint != IntersectedPoint_Derived(it_LineSegOfPoint->first->x2,it_LineSegOfPoint->first->y2))
+				{	
+					myMap.insert(pair<LineSegment*,int>(it_LineSegOfPoint->first,0));
+					numLine++;
+				}
+				it_LineSegOfPoint++;
+			}
+			///Kết thúc cập nhật trạng thái
+			//////////////////////////////////////////////////////////////////////////
+
+
+			/// Trạng thái các đoạn thẳng đã cập nhật xong
+
+			
+
+
+			if(numLine>0)
+
+				/// Nếu trong myMap còn tồn tại đoạn thẳng đi qua intersedpoint  thì tiến hành kiểm tra giao cắt của các đoạn mới kề nhau
+				/// Chỉ cần kiểm tra giao cắt của đoạn đầu và đoạn cuối trong những đoạn đi qua  intersedpoint
+			{
+				
+				///Tìm đoạn cuối trong danh sách những đoạn đi qua intersedpoint
+
+				it_LineSegOfPoint=intersedpoint->m_ListLineSegment.begin();
+
+				///Bỏ qua những đoạn có điểm cuối là intersedpoint
+				while(*intersedpoint==IntersectedPoint_Derived(it_LineSegOfPoint->first->x2,it_LineSegOfPoint->first->y2) 
+					 && it_LineSegOfPoint!=intersedpoint->m_ListLineSegment.end()) it_LineSegOfPoint++;
+
+				currentLine=myMap.find(it_LineSegOfPoint->first);	currentLineSeg=currentLine->first;
+
+				if(currentLine!=myMap.end())
+					///Kiểm tra giao cắt của đoạn cuối với đoạn tiếp theo trong myMap
+				{
+					nextLine=currentLine;nextLine++;
+
+					if(nextLine!=myMap.end()) 
+					{
+						nextLineSeg=nextLine->first;
+						CheckInterSection(currentLineSeg,nextLineSeg);
+
+					}
+				}
+
+
+				///Tìm đoạn đầu trong danh sách những đoạn đi qua intersedpoint
+
+				it_LineSegOfPoint=intersedpoint->m_ListLineSegment.end();it_LineSegOfPoint--;
+
+				///Bỏ qua những đoạn có điểm cuối là intersedpoint
+				while(
+					*intersedpoint==IntersectedPoint_Derived(it_LineSegOfPoint->first->x2,it_LineSegOfPoint->first->y2)
+					
+					&& it_LineSegOfPoint!=beginOfListLinesegment) it_LineSegOfPoint--;
+
+				currentLine=myMap.find(it_LineSegOfPoint->first); currentLineSeg=currentLine->first;
+
+				if(currentLine!=myMap.end())
+					///Kiểm tra giao cắt của đoạn đầu với đoạn kề trước trong myMap
+				{
+					prevLine=currentLine;prevLine--;
+
+					begin__=myMap.begin();begin__--;
+					if(prevLine!=begin__)
+					{
+						prevLineSeg=prevLine->first;
+						CheckInterSection(currentLineSeg,prevLineSeg);
+					}
+					
+			}
+			
+			}
+		}
+		
+		currentPoint++;				///Chuyển đến điểm sự kiện kế tiếp
+		if(progress!=0) 
+			progress->tick();
+		
+		
+	}
+
+	///copy các điểm từ m_mapPoints về vector m_IntersectedPoints
+	map<IntersectedPoint_Derived*,int,ComparePoint>::iterator it_mapPoints=m_mapPoints.begin();
+
+	while(it_mapPoints!=m_mapPoints.end())
+	{
+		m_IntersectedPoints.push_back(it_mapPoints->first);
+		it_mapPoints++;
+	}
+	
+	return m_IntersectedPoints.size();
+}
+
+size_t SweepLineIntersection::getNumberOfIntersectedPoint()
+{
+	return m_IntersectedPoints.size();
+}
+
+IntersectedPoint * SweepLineIntersection::getIntersectedPoint( size_t at )
+{
+	return LineSegmentIntersection::getIntersectedPoint(at);	
+}
+
+void SweepLineIntersection::getResultSegments( vector<LineSegment> & result )
+{
+	return LineSegmentIntersection::getResultSegments(result);
+}
+
+vector<LineSegment*> SweepLineIntersection::getResultSegments()
+{
+	return LineSegmentIntersection::getResultSegments_2();
+}
+
+
+void SweepLineIntersection::CheckInterSection( LineSegment *A,LineSegment *B )
+	///Hàm kiểm tra và xử lý sự giao cắt của 2 đoạn A,B
+{
+	
+	double x,y;
+	
+
+	if(A->Intersection2Segment(*B,x,y)==1)
+		///Nếu 2 đoạn có giao cắt
+	{
+		IntersectedPoint_Derived *intersedpoint=new IntersectedPoint_Derived(x,y);
+
+		map<IntersectedPoint_Derived*,LineSegment*,ComparePoint>::iterator it_find_Qtree=m_Qtree.find(intersedpoint);
+
+		if(it_find_Qtree!=m_Qtree.end())
+			///Nếu điểm giao cắt này đã tồn tại trong Qtree
+		{
+			delete intersedpoint;
+			if(it_find_Qtree->first->m_typeOfPoint<3)
+				///Là đầu mút của 1 đoạn thẳng khác
+			{
+				it_find_Qtree->first->m_typeOfPoint=3;
+				it_find_Qtree->first->m_ListLineSegment.comp.setvalue(max(A->y1,B->y1));
+				it_find_Qtree->first->AddLineToList(A);
+				it_find_Qtree->first->AddLineToList(B);
+				it_find_Qtree->first->AddLineToList(it_find_Qtree->second);
+				m_mapPoints.insert(pair<IntersectedPoint_Derived*,int>(it_find_Qtree->first,m_mapPoints.size()));
+			}
+			else
+			if(it_find_Qtree->first->m_typeOfPoint>=3  )
+				///Là 1 giao điểm 
+			{
+				it_find_Qtree->first->m_ListLineSegment.comp.setvalue(max(A->y1,B->y1));
+				it_find_Qtree->first->AddLineToList(A);
+				it_find_Qtree->first->AddLineToList(B);
+
+			}
+		}
+		else
+			///
+		{
+			intersedpoint->m_typeOfPoint=3;
+			intersedpoint->m_ListLineSegment.comp.setvalue(max(A->y1,B->y1));
+			intersedpoint->AddLineToList(A);				///Thêm đoạn A,B vào danh sách đoạn thẳng đi qua intersedpoint
+			intersedpoint->AddLineToList(B);
+			m_mapPoints.insert(pair<IntersectedPoint_Derived*,int>(intersedpoint,m_mapPoints.size()));
+			m_Qtree.insert(pair<IntersectedPoint_Derived*,LineSegment*>(intersedpoint,A));
+		}
+
+
+	}
+	 
+
+	
+}
+
+
+
+void SweepLineIntersection::clear()
+{
+	map<IntersectedPoint_Derived*,LineSegment*,ComparePoint>::iterator it= m_Qtree.begin();
+	while(it!=m_Qtree.end())
+	{
+		delete it->first;
+		it++;
+	}
+	
+	m_Qtree.clear();
+	m_mapPoints.clear();
+	
+	
+	for(size_t i=0;i<m_lineSegs.size();i++)
+	{
+		delete m_lineSegs[i];
+	};
+	m_lineSegs.clear();
+
+	m_IntersectedPoints.clear();
+
+}
