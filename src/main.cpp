@@ -23,7 +23,7 @@ int noname(int i)
 int main() {
 
 
-	cout<<"Hello from c++\n";
+	cout<<"Hello from c++ from linux \n";
 
 
 	Point2D ptA(1.0,1.0);
