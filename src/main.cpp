@@ -26,6 +26,8 @@ int main() {
 	cout<<"Hello from c++ from linux \n";
 	cout<<"Hello from c++ from windows \n";
 
+	cout<<"fix some bug\n";
+
 	Point2D ptA(1.0,1.0);
 	Point2D ptB(2.0,3.0);
 	Point2D ptC,ptD;
